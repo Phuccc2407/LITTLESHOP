@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -18,6 +19,8 @@ public sealed class PlacementSystem : MonoBehaviour
     private ArcadeMachine repositionedMachine;
     private Vector3 originalPosition;
     private Quaternion originalRotation;
+    private readonly Dictionary<Renderer, Color[]> originalRendererColors =
+        new Dictionary<Renderer, Color[]>();
 
     public bool IsPlacing { get { return item != null; } }
 
@@ -206,6 +209,11 @@ public sealed class PlacementSystem : MonoBehaviour
 
     private void SetPreviewState(bool isPreview)
     {
+        if (isPreview)
+        {
+            originalRendererColors.Clear();
+        }
+
         Collider[] colliders = preview.GetComponentsInChildren<Collider>();
         for (int i = 0; i < colliders.Length; i++)
         {
@@ -215,9 +223,37 @@ public sealed class PlacementSystem : MonoBehaviour
         Renderer[] renderers = preview.GetComponentsInChildren<Renderer>();
         for (int i = 0; i < renderers.Length; i++)
         {
-            renderers[i].material.color = isPreview
-                ? new Color(0.3f, 1f, 0.3f, 0.45f)
-                : Color.white;
+            Renderer renderer = renderers[i];
+            Material[] materials = renderer.materials;
+            if (isPreview)
+            {
+                Color[] originalColors = new Color[materials.Length];
+                for (int j = 0; j < materials.Length; j++)
+                {
+                    originalColors[j] = materials[j].color;
+                    materials[j].color = new Color(0.3f, 1f, 0.3f, 0.45f);
+                }
+
+                originalRendererColors[renderer] = originalColors;
+                continue;
+            }
+
+            Color[] savedColors;
+            if (!originalRendererColors.TryGetValue(renderer, out savedColors))
+            {
+                continue;
+            }
+
+            int colorCount = Mathf.Min(materials.Length, savedColors.Length);
+            for (int j = 0; j < colorCount; j++)
+            {
+                materials[j].color = savedColors[j];
+            }
+        }
+
+        if (!isPreview)
+        {
+            originalRendererColors.Clear();
         }
     }
 }

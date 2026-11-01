@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 1865611024453976817}
   - component: {fileID: 298005986652979981}
   - component: {fileID: 3016124177238365557}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Claw_01_Rail
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -102,7 +102,7 @@ GameObject:
   - component: {fileID: 7681554968035267728}
   - component: {fileID: 6264813353368669141}
   - component: {fileID: 6334231160508575318}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Claw_01_Claw_Base
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -195,7 +195,7 @@ GameObject:
   - component: {fileID: 3103165931625671327}
   - component: {fileID: 7737563807252060198}
   - component: {fileID: 2365725136448837741}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Claw_01_Door
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -285,7 +285,7 @@ GameObject:
   - component: {fileID: 2278205298769517315}
   - component: {fileID: 7794197254892587136}
   - component: {fileID: 7972361173480903467}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Claw_01_Claw_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -376,7 +376,9 @@ GameObject:
   - component: {fileID: 6952836805008946857}
   - component: {fileID: 9138844415366200992}
   - component: {fileID: 8106933850504776037}
-  m_Layer: 0
+  - component: {fileID: 5862122792650513495}
+  - component: {fileID: 7281805461662473718}
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Claw_01 (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -391,8 +393,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3337667117674990027}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.0000005066395, z: -0, w: 1}
-  m_LocalPosition: {x: -15.75, y: 0, z: -14.25}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -401,6 +403,7 @@ Transform:
   - {fileID: 3985445398912211905}
   - {fileID: 1865611024453976817}
   - {fileID: 3964587757137345807}
+  - {fileID: 5287630546517952825}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &6952836805008946857
@@ -482,6 +485,41 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 43271235679145428, guid: ac570cd5952d2394da444c25433c6ffb, type: 2}
+--- !u!114 &5862122792650513495
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3337667117674990027}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f7f3e64546170c46b94cc286b117dc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ArcadeMachine
+  definition: {fileID: 11400000, guid: be3e2a1059fab8c4e87503fdd27e19b6, type: 2}
+  playPoint: {fileID: 5287630546517952825}
+  coinsPerPlay: 1
+  active: 1
+  condition: 100
+--- !u!114 &7281805461662473718
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3337667117674990027}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fea29bb7c508c244a1f805a5fd3fc4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Outline
+  outlineMode: 0
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  outlineWidth: 10
+  precomputeOutline: 0
+  bakeKeys: []
+  bakeValues: []
 --- !u!1 &5622755865493110114
 GameObject:
   m_ObjectHideFlags: 0
@@ -493,7 +531,7 @@ GameObject:
   - component: {fileID: 3964587757137345807}
   - component: {fileID: 6871288893081108659}
   - component: {fileID: 3092280702161247357}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Claw_01_Stick
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -583,7 +621,7 @@ GameObject:
   - component: {fileID: 3588567509850470386}
   - component: {fileID: 5507810938714181528}
   - component: {fileID: 2611273071806587604}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Claw_01_Claw_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -673,7 +711,7 @@ GameObject:
   - component: {fileID: 3985445398912211905}
   - component: {fileID: 5081109337046597081}
   - component: {fileID: 2684067586802188490}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Claw_01_Insert
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -763,7 +801,7 @@ GameObject:
   - component: {fileID: 4384382508337802991}
   - component: {fileID: 634596836388671316}
   - component: {fileID: 2272860755544836504}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Claw_01_Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -842,6 +880,37 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &7256491984584268772
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5287630546517952825}
+  m_Layer: 6
+  m_Name: PlayPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5287630546517952825
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7256491984584268772}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: -1, z: 0, w: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 1.003}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 9169565716292612874}
+  m_LocalEulerAnglesHint: {x: 0, y: -180, z: 0}
 --- !u!1 &8739746690608614096
 GameObject:
   m_ObjectHideFlags: 0
@@ -853,7 +922,7 @@ GameObject:
   - component: {fileID: 3656868645582124791}
   - component: {fileID: 3880920165456599541}
   - component: {fileID: 6608644485093069482}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Claw_01_Claw_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}

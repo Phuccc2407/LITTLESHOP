@@ -4,11 +4,13 @@ using UnityEngine;
 public sealed class EconomyManager : MonoBehaviour
 {
     [SerializeField, Min(0)] private int startingCash = 10000;
+    [SerializeField, Min(1)] private int cashPerCoin = 100;
 
     public static EconomyManager Instance { get; private set; }
     public int CurrentCash { get; private set; }
     public int Revenue { get; private set; }
     public int Expenses { get; private set; }
+    public int CashPerCoin { get { return cashPerCoin; } }
 
     public event Action<int> CashChanged;
 
@@ -47,5 +49,15 @@ public sealed class EconomyManager : MonoBehaviour
         CurrentCash += amount;
         Revenue += amount;
         CashChanged?.Invoke(CurrentCash);
+    }
+
+    public void AddCoinRevenue(int coins)
+    {
+        if (coins <= 0)
+        {
+            return;
+        }
+
+        AddRevenue(coins * cashPerCoin);
     }
 }
