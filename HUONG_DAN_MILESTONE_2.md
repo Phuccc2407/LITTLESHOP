@@ -117,6 +117,10 @@ Customer dùng `NavMeshAgent` theo luồng:
    tức tiền hiện có của player.
 6. Đi tới `CustomerExit` rồi bị hủy khỏi scene.
 
+`CustomerManager` giữ chỗ máy ngay khi spawn customer để nhiều customer không
+cùng chọn một máy trong lúc đang di chuyển. Reservation được giải phóng nếu
+customer không thể tới máy hoặc lượt chơi bị hủy.
+
 #### Điểm đứng/chỗ chơi cố định cho từng máy
 
 Điểm đứng của customer nên nằm trong prefab máy, không đặt chung trong

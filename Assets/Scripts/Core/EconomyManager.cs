@@ -10,6 +10,8 @@ public sealed class EconomyManager : MonoBehaviour
     public int CurrentCash { get; private set; }
     public int Revenue { get; private set; }
     public int Expenses { get; private set; }
+    public int DailyRevenue { get; private set; }
+    public int DailyExpenses { get; private set; }
     public int CashPerCoin { get { return cashPerCoin; } }
 
     public event Action<int> CashChanged;
@@ -35,6 +37,7 @@ public sealed class EconomyManager : MonoBehaviour
 
         CurrentCash -= amount;
         Expenses += amount;
+        DailyExpenses += amount;
         CashChanged?.Invoke(CurrentCash);
         return true;
     }
@@ -48,6 +51,7 @@ public sealed class EconomyManager : MonoBehaviour
 
         CurrentCash += amount;
         Revenue += amount;
+        DailyRevenue += amount;
         CashChanged?.Invoke(CurrentCash);
     }
 
@@ -59,5 +63,11 @@ public sealed class EconomyManager : MonoBehaviour
         }
 
         AddRevenue(coins * cashPerCoin);
+    }
+
+    public void ResetDailyStats()
+    {
+        DailyRevenue = 0;
+        DailyExpenses = 0;
     }
 }

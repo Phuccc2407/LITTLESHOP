@@ -7,6 +7,7 @@ public sealed class Customer : MonoBehaviour
     private enum CustomerState
     {
         WalkingToCounter,
+        WaitingForCoins,
         WalkingToMachine,
         Playing,
         Leaving
@@ -16,29 +17,39 @@ public sealed class Customer : MonoBehaviour
     [SerializeField] private Animator animator;
     [SerializeField] private string walkingParameter = "IsWalking";
     [SerializeField] private string playingParameter = "IsPlaying";
+    [SerializeField, Range(0f, 100f)] private float startingSatisfaction = 100f;
+    [SerializeField, Min(0f)] private float satisfactionLossPerSecond = 1f;
 
     private CustomerManager manager;
     private NavMeshAgent agent;
     private ArcadeMachine machine;
     private Transform coinCounterPoint;
+    private CoinCounter coinCounter;
     private Transform exitPoint;
     private CustomerDoor entranceDoor;
     private CustomerState state;
     private float playTimeRemaining;
     private int coins;
+    private float coinPurchaseTimeRemaining;
+
+    public float Satisfaction { get; private set; }
+    public int RequiredCoins { get { return machine == null ? 0 : machine.CoinsPerPlay; } }
 
     public void Initialize(
         CustomerManager owner,
         ArcadeMachine target,
         Transform counter,
+        CoinCounter counterInteraction,
         Transform exit,
         CustomerDoor door)
     {
         manager = owner;
         machine = target;
         coinCounterPoint = counter;
+        coinCounter = counterInteraction;
         exitPoint = exit;
         entranceDoor = door;
+        Satisfaction = startingSatisfaction;
         agent = GetComponent<NavMeshAgent>();
         state = coinCounterPoint == null
             ? CustomerState.WalkingToMachine
@@ -60,10 +71,16 @@ public sealed class Customer : MonoBehaviour
             return;
         }
 
+        if (state != CustomerState.Leaving && state != CustomerState.Playing)
+        {
+            Satisfaction = Mathf.Max(0f, Satisfaction - satisfactionLossPerSecond * Time.deltaTime);
+        }
+
         if (!agent.pathPending && agent.pathStatus == NavMeshPathStatus.PathInvalid)
         {
             if (state == CustomerState.Leaving)
             {
+                CloseEntranceDoor();
                 DestroyCustomer();
             }
             else
@@ -78,9 +95,19 @@ public sealed class Customer : MonoBehaviour
         {
             if (HasReachedDestination())
             {
-                BuyCoinsAtCounter();
-                state = CustomerState.WalkingToMachine;
-                SetDestination(machine.PlayPoint.position);
+                agent.isStopped = true;
+                if (coinCounter != null)
+                {
+                    transform.SetPositionAndRotation(coinCounter.transform.position, coinCounter.transform.rotation);
+                    state = CustomerState.WaitingForCoins;
+                    coinCounter.RegisterCustomer(this);
+                }
+                else
+                {
+                    BuyCoinsAtCounter();
+                    state = CustomerState.WalkingToMachine;
+                    SetDestination(machine.PlayPoint.position);
+                }
             }
 
             return;
@@ -138,18 +165,48 @@ public sealed class Customer : MonoBehaviour
 
         if (state == CustomerState.Leaving && HasReachedDestination())
         {
-            if (entranceDoor != null)
-            {
-                entranceDoor.CloseAfterExit();
-            }
-
+            CloseEntranceDoor();
             DestroyCustomer();
         }
     }
 
+    private void CloseEntranceDoor()
+    {
+        if (entranceDoor != null)
+        {
+            entranceDoor.CloseAfterExit();
+            entranceDoor = null;
+        }
+    }
+
+    public void ReceiveCoins(int amount)
+    {
+        if (state != CustomerState.WaitingForCoins || amount < RequiredCoins)
+        {
+            return;
+        }
+
+        coins = RequiredCoins;
+        machine.RecordCoinRevenue(RequiredCoins);
+        state = CustomerState.WalkingToMachine;
+        SetDestination(machine.PlayPoint.position);
+    }
+
+    public void MoveToCoinQueuePosition(Vector3 position, Quaternion rotation)
+    {
+        if (state != CustomerState.WaitingForCoins && state != CustomerState.WalkingToCounter)
+        {
+            return;
+        }
+
+        agent.isStopped = false;
+        agent.SetDestination(position);
+        transform.rotation = rotation;
+    }
+
     private void BuyCoinsAtCounter()
     {
-        coins = machine == null ? 0 : machine.CoinsPerPlay;
+        coins = RequiredCoins;
     }
 
     private void BeginLeaving()
@@ -157,12 +214,20 @@ public sealed class Customer : MonoBehaviour
         if (machine != null)
         {
             machine.CancelPlay();
+            machine.ReleaseReservation();
             machine = null;
         }
 
         state = CustomerState.Leaving;
         agent.isStopped = false;
         SetAnimationState(true, false);
+        if (exitPoint == null)
+        {
+            CloseEntranceDoor();
+            DestroyCustomer();
+            return;
+        }
+
         SetDestination(exitPoint.position);
     }
 

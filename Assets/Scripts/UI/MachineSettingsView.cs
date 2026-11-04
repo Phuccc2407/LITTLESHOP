@@ -43,7 +43,11 @@ public sealed class MachineSettingsView : View
     {
         if (machine != null)
         {
-            machine.Repair();
+            if (!machine.Repair())
+            {
+                Debug.LogWarning("Cannot repair machine: insufficient cash or EconomyManager is missing.", this);
+            }
+
             Refresh();
         }
     }

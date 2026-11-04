@@ -16,7 +16,9 @@ public sealed class ArcadeMachine : MonoBehaviour, IInteractable
     [SerializeField, Min(1)] private int coinsPerPlay = 1;
     [SerializeField] private bool active = true;
     [SerializeField, Range(0, 100)] private int condition = 100;
+    [SerializeField, Range(1, 100)] private int conditionLossPerPlay = 10;
     private bool occupied;
+    private bool reserved;
 
     public event Action StateChanged;
 
@@ -35,6 +37,12 @@ public sealed class ArcadeMachine : MonoBehaviour, IInteractable
     public Transform PlayPoint { get { return playPoint == null ? transform : playPoint; } }
     public int CoinsPerPlay { get { return coinsPerPlay; } }
     public int Revenue { get; private set; }
+    public bool IsReserved { get { return reserved; } }
+    public int Condition { get { return condition; } }
+    public int MaintenanceCost
+    {
+        get { return definition == null ? 0 : definition.MaintenanceCost; }
+    }
 
     public void Initialize(ArcadeMachineDefinition machineDefinition)
     {
@@ -45,6 +53,7 @@ public sealed class ArcadeMachine : MonoBehaviour, IInteractable
         }
 
         occupied = false;
+        reserved = false;
     }
 
     public string InteractionPrompt
@@ -77,10 +86,27 @@ public sealed class ArcadeMachine : MonoBehaviour, IInteractable
         coinsPerPlay = Mathf.Max(1, value);
     }
 
-    public void Repair()
+    public bool Repair()
     {
+        if (condition >= 100)
+        {
+            return true;
+        }
+
+        if (EconomyManager.Instance == null)
+        {
+            Debug.LogError("Cannot repair arcade machine because EconomyManager is missing.", this);
+            return false;
+        }
+
+        if (!EconomyManager.Instance.TrySpend(MaintenanceCost))
+        {
+            return false;
+        }
+
         condition = 100;
         StateChanged?.Invoke();
+        return true;
     }
 
     public bool TryStartPlay()
@@ -90,9 +116,33 @@ public sealed class ArcadeMachine : MonoBehaviour, IInteractable
             return false;
         }
 
+        reserved = false;
         occupied = true;
         StateChanged?.Invoke();
         return true;
+    }
+
+    public bool TryReserve()
+    {
+        if (State != ArcadeMachineState.Available || reserved)
+        {
+            return false;
+        }
+
+        reserved = true;
+        StateChanged?.Invoke();
+        return true;
+    }
+
+    public void ReleaseReservation()
+    {
+        if (!reserved)
+        {
+            return;
+        }
+
+        reserved = false;
+        StateChanged?.Invoke();
     }
 
     public bool CompletePlay()
@@ -102,17 +152,22 @@ public sealed class ArcadeMachine : MonoBehaviour, IInteractable
             return false;
         }
 
-        if (EconomyManager.Instance == null)
-        {
-            Debug.LogError("Cannot complete arcade play because EconomyManager is missing.", this);
-            return false;
-        }
-
         occupied = false;
-        Revenue += coinsPerPlay;
-        EconomyManager.Instance.AddCoinRevenue(coinsPerPlay);
+        reserved = false;
+        condition = Mathf.Max(0, condition - conditionLossPerPlay);
         StateChanged?.Invoke();
         return true;
+    }
+
+    public void RecordCoinRevenue(int coins)
+    {
+        if (coins <= 0)
+        {
+            return;
+        }
+
+        Revenue += coins;
+        StateChanged?.Invoke();
     }
 
     public void CancelPlay()
@@ -123,6 +178,7 @@ public sealed class ArcadeMachine : MonoBehaviour, IInteractable
         }
 
         occupied = false;
+        reserved = false;
         StateChanged?.Invoke();
     }
 
@@ -134,6 +190,6 @@ public sealed class ArcadeMachine : MonoBehaviour, IInteractable
             : Revenue * EconomyManager.Instance.CashPerCoin;
         return machineName + "\nState: " + State + "\nPrice: " + coinsPerPlay
             + " coin(s)\nRevenue: " + Revenue + " coin(s) / ¥" + cashRevenue
-            + "\nCondition: " + condition + "%";
+            + "\nCondition: " + condition + "%\nRepair: ¥" + MaintenanceCost;
     }
 }

@@ -502,6 +502,7 @@ MonoBehaviour:
   coinsPerPlay: 1
   active: 1
   condition: 100
+  conditionLossPerPlay: 3
 --- !u!114 &7281805461662473718
 MonoBehaviour:
   m_ObjectHideFlags: 0

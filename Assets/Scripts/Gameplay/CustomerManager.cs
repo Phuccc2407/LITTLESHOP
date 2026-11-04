@@ -8,8 +8,10 @@ public sealed class CustomerManager : MonoBehaviour
     [SerializeField] private Customer customerPrefab;
     [SerializeField] private Transform entrancePoint;
     [SerializeField] private Transform coinCounterPoint;
+    [SerializeField] private CoinCounter coinCounter;
     [SerializeField] private Transform exitPoint;
     [SerializeField] private CustomerDoor entranceDoor;
+    [SerializeField] private ShopDayCycle shopDayCycle;
     [SerializeField, Min(1)] private int maxCustomers = 3;
     [SerializeField, Min(0.1f)] private float spawnInterval = 10f;
     [SerializeField] private bool spawningEnabled = true;
@@ -17,8 +19,35 @@ public sealed class CustomerManager : MonoBehaviour
     private readonly List<Customer> customers = new List<Customer>();
     private Coroutine spawnRoutine;
 
+    public int CurrentCustomerCount { get { return customers.Count; } }
+    public int CustomersSpawnedToday { get; private set; }
+    public int CustomersServedToday { get; private set; }
+    public float AverageSatisfaction
+    {
+        get
+        {
+            if (customers.Count == 0)
+            {
+                return 0f;
+            }
+
+            float total = 0f;
+            for (int i = 0; i < customers.Count; i++)
+            {
+                total += customers[i].Satisfaction;
+            }
+
+            return total / customers.Count;
+        }
+    }
+
     private void OnEnable()
     {
+        if (shopDayCycle != null)
+        {
+            shopDayCycle.DayChanged += OnDayChanged;
+        }
+
         if (spawningEnabled)
         {
             spawnRoutine = StartCoroutine(SpawnLoop());
@@ -27,6 +56,11 @@ public sealed class CustomerManager : MonoBehaviour
 
     private void OnDisable()
     {
+        if (shopDayCycle != null)
+        {
+            shopDayCycle.DayChanged -= OnDayChanged;
+        }
+
         if (spawnRoutine != null)
         {
             StopCoroutine(spawnRoutine);
@@ -50,6 +84,11 @@ public sealed class CustomerManager : MonoBehaviour
 
     public void SpawnCustomer()
     {
+        if (shopDayCycle != null && shopDayCycle.State != ShopDayState.Open)
+        {
+            return;
+        }
+
         if (customerPrefab == null || entrancePoint == null || exitPoint == null)
         {
             Debug.LogError("CustomerManager requires a customer prefab, entrance, and exit point.", this);
@@ -70,6 +109,7 @@ public sealed class CustomerManager : MonoBehaviour
         NavMeshHit hit;
         if (!NavMesh.SamplePosition(entrancePoint.position, out hit, 2f, NavMesh.AllAreas))
         {
+            machine.ReleaseReservation();
             Debug.LogError("Customer entrance is not on a baked NavMesh.", this);
             return;
         }
@@ -80,13 +120,23 @@ public sealed class CustomerManager : MonoBehaviour
         }
 
         Customer customer = Instantiate(customerPrefab, hit.position, entrancePoint.rotation);
-        customer.Initialize(this, machine, coinCounterPoint, exitPoint, entranceDoor);
+        customer.Initialize(this, machine, coinCounterPoint, coinCounter, exitPoint, entranceDoor);
         customers.Add(customer);
+        CustomersSpawnedToday++;
     }
 
     public void NotifyCustomerFinished(Customer customer)
     {
-        customers.Remove(customer);
+        if (customers.Remove(customer))
+        {
+            CustomersServedToday++;
+        }
+    }
+
+    private void OnDayChanged(int dayNumber)
+    {
+        CustomersSpawnedToday = 0;
+        CustomersServedToday = 0;
     }
 
     private IEnumerator SpawnLoop()
@@ -106,7 +156,7 @@ public sealed class CustomerManager : MonoBehaviour
 
         for (int i = 0; i < machines.Length; i++)
         {
-            if (machines[i].State != ArcadeMachineState.Available)
+            if (machines[i].State != ArcadeMachineState.Available || machines[i].IsReserved)
             {
                 continue;
             }
@@ -119,6 +169,11 @@ public sealed class CustomerManager : MonoBehaviour
             }
         }
 
-        return closest;
+        if (closest != null && closest.TryReserve())
+        {
+            return closest;
+        }
+
+        return null;
     }
 }
