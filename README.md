@@ -4,7 +4,7 @@
 
 **LITTLE SHOP - Mô phỏng cửa hàng arcade**
 
-Đề tài xây dựng một prototype cửa hàng arcade bằng Unity, trong đó người chơi có thể di chuyển trong cửa hàng, mua máy arcade, nhận hàng và đặt máy vào không gian trưng bày.
+Đề tài xây dựng một prototype mô phỏng quá trình quản lý và vận hành cửa hàng arcade bằng Unity. Người chơi đảm nhiệm vai trò chủ cửa hàng, di chuyển trong không gian, mua và tiếp nhận máy arcade, sắp xếp khu vực trưng bày, đồng thời phục vụ khách hàng để duy trì hoạt động kinh doanh. Qua đó, đề tài minh họa cách kết hợp gameplay tương tác, quản lý vật thể và mô phỏng hành vi khách hàng trong một môi trường 3D.
 
 ## Thành viên
 
