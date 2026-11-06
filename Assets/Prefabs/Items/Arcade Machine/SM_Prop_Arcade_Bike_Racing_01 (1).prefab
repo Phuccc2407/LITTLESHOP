@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 4100921851258836698}
   - component: {fileID: 4899560176326980353}
   - component: {fileID: 734533649483140268}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Bike_Racing_01_Screen
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -101,7 +101,7 @@ GameObject:
   - component: {fileID: 1664771284926595771}
   - component: {fileID: 5512777705472368880}
   - component: {fileID: 4045407769862186635}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Bike_Racing_01_Handlebars
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -181,6 +181,37 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &8197591949765646953
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7374703182317595256}
+  m_Layer: 6
+  m_Name: PlayPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7374703182317595256
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8197591949765646953}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalPosition: {x: -0, y: 0.757, z: 0.234}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8457297992958864272}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!1 &8798805936546998652
 GameObject:
   m_ObjectHideFlags: 0
@@ -192,7 +223,7 @@ GameObject:
   - component: {fileID: 8457297992958864272}
   - component: {fileID: 7081990573937454427}
   - component: {fileID: 2968040143823914260}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Bike_Racing_01_Bike
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -213,6 +244,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1664771284926595771}
+  - {fileID: 7374703182317595256}
   m_Father: {fileID: 5508603412347492277}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &7081990573937454427
@@ -284,7 +316,9 @@ GameObject:
   - component: {fileID: 7329973775753713911}
   - component: {fileID: 8321401363255654422}
   - component: {fileID: 3258917021948880819}
-  m_Layer: 0
+  - component: {fileID: 379200893361010340}
+  - component: {fileID: -2255056772519727430}
+  m_Layer: 6
   m_Name: SM_Prop_Arcade_Bike_Racing_01 (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -386,3 +420,39 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 43639893299190754, guid: 22928e81c8e02f74fb6b730e9b71f9ed, type: 2}
+--- !u!114 &379200893361010340
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9135349614468039298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f7f3e64546170c46b94cc286b117dc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ArcadeMachine
+  definition: {fileID: 11400000, guid: 007070024f6fdb54c93c2d4d552eecce, type: 2}
+  playPoint: {fileID: 7374703182317595256}
+  coinsPerPlay: 1
+  active: 1
+  condition: 100
+  conditionLossPerPlay: 10
+--- !u!114 &-2255056772519727430
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9135349614468039298}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fea29bb7c508c244a1f805a5fd3fc4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Outline
+  outlineMode: 0
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  outlineWidth: 10
+  precomputeOutline: 0
+  bakeKeys: []
+  bakeValues: []

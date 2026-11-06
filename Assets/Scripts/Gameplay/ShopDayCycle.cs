@@ -71,6 +71,10 @@ public sealed class ShopDayCycle : MonoBehaviour
         if (State == ShopDayState.Open && !CanOpenShop)
         {
             CloseShop();
+            if (CurrentTimeMinutes >= closingHour * 60f && customerManager != null)
+            {
+                customerManager.RequestCustomersLeave();
+            }
         }
     }
 

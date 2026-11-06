@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.AI;
 
 [RequireComponent(typeof(NavMeshAgent))]
+[RequireComponent(typeof(CapsuleCollider))]
 public sealed class Customer : MonoBehaviour
 {
     private enum CustomerState
@@ -19,6 +20,7 @@ public sealed class Customer : MonoBehaviour
     [SerializeField] private string playingParameter = "IsPlaying";
     [SerializeField, Range(0f, 100f)] private float startingSatisfaction = 100f;
     [SerializeField, Min(0f)] private float satisfactionLossPerSecond = 1f;
+    [SerializeField] private UnityEngine.Object[] skinPrefabs;
 
     private CustomerManager manager;
     private NavMeshAgent agent;
@@ -31,9 +33,93 @@ public sealed class Customer : MonoBehaviour
     private float playTimeRemaining;
     private int coins;
     private float coinPurchaseTimeRemaining;
+    private Animator animationTarget;
 
     public float Satisfaction { get; private set; }
     public int RequiredCoins { get { return machine == null ? 0 : machine.CoinsPerPlay; } }
+    public bool IsWaitingForCoins { get { return state == CustomerState.WaitingForCoins; } }
+
+    private void Awake()
+    {
+        ApplyRandomSkin();
+
+        CapsuleCollider collider = GetComponent<CapsuleCollider>();
+        if (collider == null)
+        {
+            collider = gameObject.AddComponent<CapsuleCollider>();
+        }
+
+        collider.center = new Vector3(0f, 0.9f, 0f);
+        collider.radius = 0.3f;
+        collider.height = 1.8f;
+        collider.direction = 1;
+
+        Outline outline = GetComponent<Outline>();
+        if (outline == null)
+        {
+            outline = gameObject.AddComponent<Outline>();
+        }
+
+        outline.OutlineMode = Outline.Mode.OutlineVisible;
+        outline.OutlineColor = Color.white;
+        outline.OutlineWidth = 10f;
+        outline.enabled = false;
+    }
+
+    private void ApplyRandomSkin()
+    {
+        animationTarget = animator;
+
+        if (skinPrefabs == null || skinPrefabs.Length == 0)
+        {
+            return;
+        }
+
+        UnityEngine.Object skinAsset = skinPrefabs[Random.Range(0, skinPrefabs.Length)];
+        GameObject skinPrefab = skinAsset as GameObject;
+        if (skinPrefab == null)
+        {
+            Debug.LogError("Customer skin must be a prefab with a GameObject root.", skinAsset);
+            return;
+        }
+
+        Renderer[] defaultRenderers = GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < defaultRenderers.Length; i++)
+        {
+            if (defaultRenderers[i].GetComponentInParent<Canvas>() == null)
+            {
+                defaultRenderers[i].enabled = false;
+            }
+        }
+
+        UnityEngine.Object instantiatedSkin = UnityEngine.Object.Instantiate(
+            skinAsset,
+            transform,
+            false);
+        GameObject skin = instantiatedSkin as GameObject;
+        if (skin == null)
+        {
+            Debug.LogError("Customer skin prefab must have a GameObject root.", skinPrefab);
+            return;
+        }
+
+        skin.name = "CustomerSkin";
+        skin.transform.localPosition = Vector3.zero;
+        skin.transform.localRotation = Quaternion.identity;
+        skin.transform.localScale = Vector3.one;
+
+        Animator skinAnimator = skin.GetComponentInChildren<Animator>();
+        if (skinAnimator != null && animator != null)
+        {
+            skinAnimator.runtimeAnimatorController = animator.runtimeAnimatorController;
+            if (animator.avatar != null)
+            {
+                skinAnimator.avatar = animator.avatar;
+            }
+
+            animationTarget = skinAnimator;
+        }
+    }
 
     public void Initialize(
         CustomerManager owner,
@@ -51,17 +137,24 @@ public sealed class Customer : MonoBehaviour
         entranceDoor = door;
         Satisfaction = startingSatisfaction;
         agent = GetComponent<NavMeshAgent>();
-        state = coinCounterPoint == null
-            ? CustomerState.WalkingToMachine
-            : CustomerState.WalkingToCounter;
-
         if (agent == null || !agent.isOnNavMesh)
         {
             Debug.LogError("Customer must spawn on a baked NavMesh.", this);
             return;
         }
 
-        SetDestination(GetCurrentDestination());
+        if (coinCounter != null)
+        {
+            state = CustomerState.WalkingToCounter;
+            coinCounter.RegisterCustomer(this);
+        }
+        else
+        {
+            state = coinCounterPoint == null
+                ? CustomerState.WalkingToMachine
+                : CustomerState.WalkingToCounter;
+            SetDestination(GetCurrentDestination());
+        }
     }
 
     private void Update()
@@ -98,9 +191,8 @@ public sealed class Customer : MonoBehaviour
                 agent.isStopped = true;
                 if (coinCounter != null)
                 {
-                    transform.SetPositionAndRotation(coinCounter.transform.position, coinCounter.transform.rotation);
                     state = CustomerState.WaitingForCoins;
-                    coinCounter.RegisterCustomer(this);
+                    SetAnimationState(false, false);
                 }
                 else
                 {
@@ -199,9 +291,31 @@ public sealed class Customer : MonoBehaviour
             return;
         }
 
+        float arrivalDistance = Mathf.Max(agent.stoppingDistance, interactionDistance);
+        bool alreadyAtPosition = (transform.position - position).sqrMagnitude
+            <= arrivalDistance * arrivalDistance;
+        if (state == CustomerState.WaitingForCoins && alreadyAtPosition)
+        {
+            agent.isStopped = true;
+            transform.rotation = rotation;
+            SetAnimationState(false, false);
+            return;
+        }
+
+        if (state == CustomerState.WaitingForCoins)
+        {
+            state = CustomerState.WalkingToCounter;
+        }
+
         agent.isStopped = false;
         agent.SetDestination(position);
         transform.rotation = rotation;
+        SetAnimationState(true, false);
+    }
+
+    public void RequestLeave()
+    {
+        BeginLeaving();
     }
 
     private void BuyCoinsAtCounter()
@@ -211,6 +325,16 @@ public sealed class Customer : MonoBehaviour
 
     private void BeginLeaving()
     {
+        if (state == CustomerState.Leaving)
+        {
+            return;
+        }
+
+        if (coinCounter != null)
+        {
+            coinCounter.UnregisterCustomer(this);
+        }
+
         if (machine != null)
         {
             machine.CancelPlay();
@@ -250,19 +374,20 @@ public sealed class Customer : MonoBehaviour
 
     private void SetAnimationState(bool walking, bool playing)
     {
-        if (animator == null)
+        Animator target = animationTarget == null ? animator : animationTarget;
+        if (target == null)
         {
             return;
         }
 
         if (!string.IsNullOrEmpty(walkingParameter))
         {
-            animator.SetBool(walkingParameter, walking);
+            target.SetBool(walkingParameter, walking);
         }
 
         if (!string.IsNullOrEmpty(playingParameter))
         {
-            animator.SetBool(playingParameter, playing);
+            target.SetBool(playingParameter, playing);
         }
     }
 

@@ -12,6 +12,7 @@ public sealed class PlayerInteractor : MonoBehaviour
     private InputAction interactAction;
     private IInteractable currentInteractable;
     private Outline currentOutline;
+    private CustomerWorldStatus currentCustomerStatus;
 
     private void Awake()
     {
@@ -37,18 +38,24 @@ public sealed class PlayerInteractor : MonoBehaviour
         }
 
         SetOutline(null);
+        SetCustomerStatus(null);
     }
 
     private void Update()
     {
         Outline nextOutline;
-        currentInteractable = FindInteractable(out nextOutline);
+        CustomerWorldStatus nextCustomerStatus;
+        currentInteractable = FindInteractable(out nextOutline, out nextCustomerStatus);
         if (currentInteractable == null || !currentInteractable.CanInteract(this))
         {
-            nextOutline = null;
+            if (nextCustomerStatus == null)
+            {
+                nextOutline = null;
+            }
         }
 
         SetOutline(nextOutline);
+        SetCustomerStatus(nextCustomerStatus);
         if (interactTextView != null && currentInteractable != null && currentInteractable.CanInteract(this))
         {
             interactTextView.SetText(currentInteractable.InteractionPrompt);
@@ -81,9 +88,12 @@ public sealed class PlayerInteractor : MonoBehaviour
         }
     }
 
-    private IInteractable FindInteractable(out Outline outline)
+    private IInteractable FindInteractable(
+        out Outline outline,
+        out CustomerWorldStatus customerStatus)
     {
         outline = null;
+        customerStatus = null;
         if (playerCamera == null)
         {
             return null;
@@ -93,6 +103,12 @@ public sealed class PlayerInteractor : MonoBehaviour
         RaycastHit hit;
         if (Physics.Raycast(ray, out hit, interactionRange, interactionLayers, QueryTriggerInteraction.Ignore))
         {
+            Customer customer = hit.collider.GetComponentInParent<Customer>();
+            if (customer != null)
+            {
+                customerStatus = customer.GetComponentInChildren<CustomerWorldStatus>(true);
+            }
+
             outline = hit.collider.GetComponentInParent<Outline>();
             return hit.collider.GetComponentInParent<IInteractable>();
         }
@@ -116,6 +132,25 @@ public sealed class PlayerInteractor : MonoBehaviour
         if (currentOutline != null)
         {
             currentOutline.enabled = true;
+        }
+    }
+
+    private void SetCustomerStatus(CustomerWorldStatus status)
+    {
+        if (currentCustomerStatus == status)
+        {
+            return;
+        }
+
+        if (currentCustomerStatus != null)
+        {
+            currentCustomerStatus.SetVisible(false);
+        }
+
+        currentCustomerStatus = status;
+        if (currentCustomerStatus != null)
+        {
+            currentCustomerStatus.SetVisible(true);
         }
     }
 }

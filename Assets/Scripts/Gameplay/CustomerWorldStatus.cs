@@ -7,11 +7,36 @@ public sealed class CustomerWorldStatus : MonoBehaviour
     [SerializeField] private TMP_Text statusText;
     [SerializeField] private bool faceCamera = true;
 
+    private Canvas worldCanvas;
+    private Transform billboardTransform;
+
+    public void SetVisible(bool visible)
+    {
+        if (worldCanvas != null)
+        {
+            worldCanvas.enabled = visible;
+        }
+    }
+
     private void Awake()
     {
         if (customer == null)
         {
             customer = GetComponentInParent<Customer>();
+        }
+
+        worldCanvas = GetComponentInParent<Canvas>();
+        if (worldCanvas != null)
+        {
+            worldCanvas.overrideSorting = true;
+            worldCanvas.sortingOrder = 10;
+            worldCanvas.enabled = false;
+            billboardTransform = worldCanvas.transform;
+        }
+
+        if (statusText != null)
+        {
+            statusText.raycastTarget = false;
         }
     }
 
@@ -30,7 +55,12 @@ public sealed class CustomerWorldStatus : MonoBehaviour
 
         if (faceCamera && Camera.main != null)
         {
-            transform.forward = Camera.main.transform.forward;
+            Transform target = billboardTransform == null ? transform : billboardTransform;
+            Vector3 directionToCamera = Camera.main.transform.position - target.position;
+            if (directionToCamera.sqrMagnitude > 0.001f)
+            {
+                target.rotation = Quaternion.LookRotation(directionToCamera, Vector3.up);
+            }
         }
     }
 }

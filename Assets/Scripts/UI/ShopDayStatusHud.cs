@@ -58,12 +58,12 @@ public sealed class ShopDayStatusHud : MonoBehaviour
         {
             if (stateText != null)
             {
-                stateText.text = "Shop: --";
+                stateText.text = "SHOP: --";
             }
 
             if (timeText != null)
             {
-                timeText.text = "Time: --";
+                timeText.text = "TIME: --";
             }
 
             return;
@@ -72,13 +72,13 @@ public sealed class ShopDayStatusHud : MonoBehaviour
         if (stateText != null)
         {
             stateText.text = shopDayCycle.State == ShopDayState.Open
-                ? "Shop: OPEN"
-                : "Shop: CLOSED";
+                ? "SHOP: OPEN"
+                : "SHOP: CLOSED";
         }
 
         if (timeText != null)
         {
-            timeText.text = "Day " + shopDayCycle.DayNumber + " - "
+            timeText.text = "DAY " + shopDayCycle.DayNumber + " - "
                 + shopDayCycle.CurrentHour.ToString("00") + ":"
                 + shopDayCycle.CurrentMinute.ToString("00");
         }
@@ -87,14 +87,13 @@ public sealed class ShopDayStatusHud : MonoBehaviour
         {
             if (customerManager == null)
             {
-                customerText.text = "Customers: --";
+                customerText.text = "CUSTOMERS: --";
             }
             else
             {
-                customerText.text = "Customers: " + customerManager.CurrentCustomerCount
-                    + "\nEntered today: " + customerManager.CustomersSpawnedToday
-                    + "\nServed today: " + customerManager.CustomersServedToday
-                    + "\nSatisfaction: " + Mathf.RoundToInt(customerManager.AverageSatisfaction) + "%";
+                customerText.text = "CUSTOMERS: " + customerManager.CurrentCustomerCount
+                    + "\nENTERED TODAY: " + customerManager.CustomersSpawnedToday
+                    + "\nSERVED TODAY: " + customerManager.CustomersServedToday;
             }
         }
     }

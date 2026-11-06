@@ -27,10 +27,11 @@ Khi `ShopDayCycle` được gán vào `CustomerManager`:
 
 - Shop ở trạng thái `Open` thì customer được spawn theo `Spawn Interval`.
 - Gọi `CloseShop()` sẽ dừng spawn customer mới.
-- Customer đã vào shop vẫn được phép hoàn thành lượt và đi ra.
+- Khi đóng thủ công, customer đã vào shop vẫn được phép hoàn thành lượt và đi ra.
 - Đồng hồ 24 giờ luôn chạy kể cả khi shop đang đóng.
 - Đến `Closing Hour`, shop bắt buộc chuyển sang `Closed` và dừng spawn customer
-  mới.
+  mới; nếu vẫn còn customer trong shop, tất cả sẽ được yêu cầu xếp hàng rời
+  shop qua `Exit Point`.
 - Sau `Closing Hour`, thời gian tiếp tục chạy qua đêm; đến `00:00` mới tăng
   sang ngày tiếp theo.
 - Từ `Opening Hour` của ngày mới, người chơi có thể mở ca bằng bảng LED.
@@ -193,9 +194,10 @@ và tổng kết cuối ngày đều hoạt động đúng.
 4. Gán `CoinCounter` vào field `Coin Counter` của `CustomerManager`.
 5. Đảm bảo `Coin Counter Point` là điểm đến chung trước quầy.
 
-Customer đến sau sẽ tự xếp vào vị trí tiếp theo. Khi khách đầu tiên được bán
-coin, hàng tự dịch lên một vị trí và khách kế tiếp trở thành người chờ giao
-dịch.
+Customer đăng ký vào hàng ngay khi được spawn và đi thẳng tới vị trí chờ,
+không đi qua quầy trước. Customer đến sau sẽ tự xếp vào vị trí tiếp theo.
+Khi khách đầu tiên được bán coin, hàng tự dịch lên một vị trí và khách kế tiếp
+trở thành người chờ giao dịch.
 
 ## 16. Tạo UI world-space cho customer
 
@@ -206,12 +208,32 @@ dịch.
 5. Gán TextMeshPro Text vào `Status Text`; để trống `Customer` để tự tìm parent.
 6. Đặt Canvas trên đầu customer và chỉnh scale nhỏ, ví dụ `0.01`.
 
-UI hiển thị số coin khách cần mua và satisfaction hiện tại:
+UI mặc định được ẩn. Khi tâm camera/crosshair của player raycast trúng một
+customer, chỉ UI của customer đó mới hiện số coin cần mua và satisfaction,
+đồng thời tự xoay về phía camera player:
 
 ```text
 Coin: 2
 Satisfaction: 87%
 ```
+
+## 16.1. Đa dạng skin và outline customer
+
+Prefab customer có field `Skin Prefabs`. Khi customer spawn, một prefab trong
+mảng sẽ được chọn ngẫu nhiên. Có thể thay đổi danh sách này bằng các prefab
+nhân vật humanoid dùng chung rig với animation customer.
+
+1. Mở `Assets/Prefabs/Customers/C1.prefab`.
+2. Trong component `Customer`, thêm các character prefab vào `Skin Prefabs`.
+3. Đảm bảo mỗi skin có `Animator` và avatar tương thích với controller
+   `Assets/Prefabs/Customers/Customer.controller`.
+4. Chạy scene và xác nhận các customer mới có ngoại hình khác nhau nhưng vẫn
+   dùng được `Walking`, `Standing Idle` và `Cheering`.
+
+Customer có `CapsuleCollider` trên root và root nằm ở layer `Interactable`.
+`PlayerInteractor` sẽ raycast từ tâm camera/crosshair; khi trúng customer,
+outline màu vàng và UI status của đúng customer đó sẽ hiện. Khi crosshair rời
+customer, outline và UI status sẽ tắt.
 
 ## 17. Tạo UI bán coin cho player
 
@@ -238,7 +260,8 @@ tiền bán coin; doanh thu lượt chơi vẫn được cộng khi lượt chơ
 
 1. Mở shop và để ít nhất hai customer cùng tới quầy.
 2. Xác nhận customer đứng lần lượt tại các `Queue Points`.
-3. Xác nhận UI world-space của mỗi customer hiển thị coin và satisfaction.
+3. Nhìn lần lượt vào từng customer và xác nhận chỉ UI world-space của customer
+   đang được ngắm hiển thị coin và satisfaction.
 4. Tương tác quầy, nhập số coin nhỏ hơn yêu cầu và xác nhận giao dịch bị từ chối.
 5. Nhập đủ coin rồi bấm `Sell`, xác nhận tiền mặt tăng ngay.
 6. Xác nhận khách đầu tiên đi tới máy và khách kế tiếp tiến lên quầy.
@@ -265,9 +288,9 @@ sẽ được dùng cho phần thưởng/phạt ở milestone sau.
    field `Animator`.
 6. Nếu muốn animation quầy, gán `Animator` và trigger `CustomerPurchase`.
 
-Customer sẽ đi tới quầy và xếp hàng chờ player bán coin. Nếu không gán
-`CoinCounter`, flow cũ vẫn dùng vị trí quầy như một điểm đi qua và nhận coin
-ngay lập tức.
+Customer sẽ đi thẳng tới các `Queue Points` và xếp hàng chờ player bán coin.
+Nếu không gán `CoinCounter`, flow cũ vẫn dùng vị trí quầy như một điểm đi qua
+và nhận coin ngay lập tức.
 
 ## 14. Kiểm thử hài lòng và quầy coin
 
@@ -277,3 +300,49 @@ ngay lập tức.
 4. Xác nhận HUD hiển thị `Satisfaction: ...%`.
 5. Đặt `Satisfaction Loss Per Second` thành `10` để thấy điểm giảm nhanh.
 6. Bán đủ coin và xác nhận customer tiếp tục đi tới máy.
+
+## 19. Cấu hình animation customer khi chờ
+
+Script `Customer` điều khiển Animator bằng hai Bool Parameter:
+
+- `IsWalking`: `true` khi customer đang đi tới queue, máy hoặc cửa ra.
+- `IsPlaying`: `true` khi customer đang chơi máy.
+
+Khi customer đứng chờ mua coin, script đặt cả hai parameter về `false`.
+Animator Controller vì vậy phải có state đứng yên `Idle`.
+
+1. Mở prefab customer, chọn component `Animator` và mở controller
+   `Assets/Prefabs/Customers/Customer.controller`.
+2. Trong tab `Parameters`, tạo hai parameter kiểu `Bool` đúng tên:
+   `IsWalking` và `IsPlaying`.
+3. Kéo animation đứng yên của model vào Animator Graph để tạo state `Idle`.
+   Có thể dùng clip idle tương thích với rig customer; không dùng clip
+   `Standing Idle` của player nếu khác avatar/rig.
+4. Đặt `Idle` làm `Layer 0` default state.
+5. Tạo các transition sau:
+
+   - `Idle -> Walking`: Condition `IsWalking == true`.
+   - `Walking -> Idle`: Condition `IsWalking == false`.
+   - `Walking -> Cheering` (hoặc state chơi máy): Condition
+     `IsPlaying == true`.
+   - `Cheering -> Idle`: Condition `IsPlaying == false`.
+
+6. Với các transition dùng Bool, bỏ `Has Exit Time` để animation đổi trạng
+   thái ngay khi customer tới queue hoặc được bán coin. Đặt Transition
+   Duration ngắn, khoảng `0.1` đến `0.25` giây.
+7. Chọn state `Idle` và bật `Loop Time` cho clip idle. Clip `Walking` và
+   `Cheering` cũng nên bật loop nếu animation được phát lặp.
+8. Trong prefab customer, kiểm tra các field của `Customer`:
+   - `Animator` trỏ tới Animator trên root customer.
+   - `Walking Parameter` là `IsWalking`.
+   - `Playing Parameter` là `IsPlaying`.
+
+Luồng kiểm thử:
+
+```text
+Spawn -> IsWalking = true -> Walking
+Tới queue -> IsWalking = false, IsPlaying = false -> Idle
+Bán coin -> IsWalking = true -> Walking
+Tới máy -> IsWalking = false, IsPlaying = true -> Cheering/Playing
+Hết lượt -> IsWalking = true, IsPlaying = false -> Walking
+```

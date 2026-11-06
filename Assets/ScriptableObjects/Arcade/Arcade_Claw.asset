@@ -18,7 +18,7 @@ MonoBehaviour:
   category: 0
   purchasePrice: 25000
   prefab: {fileID: 3337667117674990027, guid: 2624aebf29b253a44a835f13a111c689, type: 3}
-  icon: {fileID: 21300000, guid: 7002f85732978c94abe9f1a2c03ac372, type: 3}
+  icon: {fileID: 21300000, guid: 9a7ab4d86bd654a409004220650a3f71, type: 3}
   placementFootprint: {x: 1, y: 1, z: 1}
   canBePlaced: 1
   canBeCarried: 1
@@ -28,4 +28,4 @@ MonoBehaviour:
   playDuration: 30
   customerCapacity: 1
   attractiveness: 1
-  maintenanceCost: 0
+  maintenanceCost: 50000

@@ -4,10 +4,8 @@ using UnityEngine;
 
 public sealed class CoinCounter : MonoBehaviour, IInteractable
 {
-    [SerializeField] private Animator animator;
     [SerializeField] private string purchaseTrigger = "CustomerPurchase";
     [SerializeField] private Transform[] queuePoints;
-    [SerializeField] private TMP_Text counterStatusText;
 
     private readonly List<Customer> queue = new List<Customer>();
 
@@ -23,7 +21,8 @@ public sealed class CoinCounter : MonoBehaviour, IInteractable
 
     public bool CanInteract(PlayerInteractor interactor)
     {
-        return queue.Count > 0 && GameViewManager.Instance != null;
+        return queue.Count > 0 && queue[0] != null && queue[0].IsWaitingForCoins
+            && GameViewManager.Instance != null;
     }
 
     public void Interact(PlayerInteractor interactor)
@@ -47,9 +46,19 @@ public sealed class CoinCounter : MonoBehaviour, IInteractable
         return true;
     }
 
+    public void UnregisterCustomer(Customer customer)
+    {
+        if (customer == null || !queue.Remove(customer))
+        {
+            return;
+        }
+
+        RefreshQueuePositions();
+    }
+
     public bool SellToNextCustomer(int amount)
     {
-        if (queue.Count == 0 || amount <= 0)
+        if (queue.Count == 0 || queue[0] == null || !queue[0].IsWaitingForCoins || amount <= 0)
         {
             return false;
         }
@@ -61,10 +70,6 @@ public sealed class CoinCounter : MonoBehaviour, IInteractable
         }
 
         EconomyManager.Instance.AddCoinRevenue(amount);
-        if (animator != null && !string.IsNullOrEmpty(purchaseTrigger))
-        {
-            animator.SetTrigger(purchaseTrigger);
-        }
 
         queue.RemoveAt(0);
         customer.ReceiveCoins(customer.RequiredCoins);
@@ -102,13 +107,6 @@ public sealed class CoinCounter : MonoBehaviour, IInteractable
             {
                 queue[i].MoveToCoinQueuePosition(GetQueuePosition(i), GetQueueRotation(i));
             }
-        }
-
-        if (counterStatusText != null)
-        {
-            counterStatusText.text = queue.Count == 0
-                ? "No customers waiting"
-                : queue.Count + " customer(s) waiting";
         }
     }
 }

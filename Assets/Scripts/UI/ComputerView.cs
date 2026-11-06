@@ -28,17 +28,17 @@ public sealed class ComputerView : View
         if (catalogIndex < 0 || catalogIndex >= items.Length || items[catalogIndex] == null
             || deliveryManager == null)
         {
-            SetFeedback("Catalog chưa được cấu hình.");
+            SetFeedback("The catalog is not configured.");
             return;
         }
 
         if (!deliveryManager.CreateOrder(items[catalogIndex]))
         {
-            SetFeedback("Không đủ tiền hoặc hệ thống giao hàng chưa sẵn sàng.");
+            SetFeedback("Not enough cash or the delivery system is unavailable.");
             return;
         }
 
-        SetFeedback("Đã đặt hàng. Hàng sẽ được giao tại khu nhận hàng.");
+        SetFeedback("Order placed. Items will be delivered to the pickup area.");
         Refresh();
     }
 
@@ -67,7 +67,7 @@ public sealed class ComputerView : View
         {
             if (items.Length == 0)
             {
-                itemText.text = "Chưa có sản phẩm";
+                itemText.text = "No products available.";
             }
             else
             {
@@ -111,7 +111,7 @@ public sealed class ComputerView : View
         grid.cellSize = new Vector2(210f, 280f);
         grid.spacing = new Vector2(16f, 16f);
         grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        grid.constraintCount = 3;
+        grid.constraintCount = 6;
         grid.childAlignment = TextAnchor.UpperLeft;
 
         for (int i = 0; i < items.Length; i++)

@@ -43,6 +43,11 @@ public sealed class CustomerManager : MonoBehaviour
 
     private void OnEnable()
     {
+        if (coinCounterPoint != null && coinCounter == null)
+        {
+            Debug.LogError("CustomerManager has a Coin Counter Point but no Coin Counter assigned.", this);
+        }
+
         if (shopDayCycle != null)
         {
             shopDayCycle.DayChanged += OnDayChanged;
@@ -130,6 +135,18 @@ public sealed class CustomerManager : MonoBehaviour
         if (customers.Remove(customer))
         {
             CustomersServedToday++;
+        }
+    }
+
+    public void RequestCustomersLeave()
+    {
+        Customer[] customersSnapshot = customers.ToArray();
+        for (int i = 0; i < customersSnapshot.Length; i++)
+        {
+            if (customersSnapshot[i] != null)
+            {
+                customersSnapshot[i].RequestLeave();
+            }
         }
     }
 
