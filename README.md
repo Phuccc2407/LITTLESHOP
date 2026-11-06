@@ -14,3 +14,6 @@
 
 - **Lập trình viên chính:** thực hiện toàn bộ các phần của đề tài, bao gồm
   gameplay, hệ thống mua hàng và giao hàng, đặt máy arcade, giao diện người dùng và cấu hình project Unity.
+
+## Báo cáo
+- Link báo cáo: https://drive.google.com/drive/folders/1_J3LmzVldpI3qaDKNBAmllAhcEKpH-GL?usp=sharing
