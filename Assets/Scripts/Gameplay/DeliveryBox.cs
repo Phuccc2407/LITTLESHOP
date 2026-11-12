@@ -6,6 +6,7 @@ public sealed class DeliveryBox : MonoBehaviour, IInteractable
     private ItemDefinition contents;
     private bool opened;
     private PlacementSystem placementSystem;
+    public ItemDefinition Contents { get { return contents; } }
 
     public string InteractionPrompt
     {
@@ -37,6 +38,7 @@ public sealed class DeliveryBox : MonoBehaviour, IInteractable
 
         if (placementSystem.BeginDirectPlacement(contents, this))
         {
+            ShopAudio.Play(ShopSound.Unpack);
             opened = true;
             if (body != null)
             {
@@ -65,6 +67,7 @@ public sealed class DeliveryBox : MonoBehaviour, IInteractable
 
     public void DestroyAfterPlacement()
     {
+        contents = null;
         Destroy(gameObject);
     }
 

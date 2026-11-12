@@ -30,7 +30,7 @@ public sealed class CatalogItemCard : MonoBehaviour
 
         CreateIcon(machine);
         CreateText(machine.DisplayName, 22f);
-        CreateText("¥" + machine.PurchasePrice.ToString("N0"), 18f);
+        CreateText("\u00A5" + machine.PurchasePrice.ToString("N0"), 18f);
         CreatePurchaseButton();
     }
 

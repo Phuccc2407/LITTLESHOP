@@ -42,6 +42,8 @@ public sealed class CustomerDoor : MonoBehaviour
 
     private void RotateTo(Quaternion target)
     {
+        if (Quaternion.Angle(doorTransform.localRotation, target) > 1f)
+            ShopAudio.Play(ShopSound.Door);
         if (rotationRoutine != null)
         {
             StopCoroutine(rotationRoutine);

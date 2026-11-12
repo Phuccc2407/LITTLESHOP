@@ -15,9 +15,20 @@ public sealed class CustomerManager : MonoBehaviour
     [SerializeField, Min(1)] private int maxCustomers = 3;
     [SerializeField, Min(0.1f)] private float spawnInterval = 10f;
     [SerializeField] private bool spawningEnabled = true;
+    [SerializeField] private CustomerProfile[] customerProfiles;
+    [SerializeField, Range(0f, 0.9f)] private float arrivalVariation = 0.5f;
+
+    public bool IsShopOpen { get { return shopDayCycle == null || shopDayCycle.State == ShopDayState.Open; } }
+    public CustomerProfile PickProfile()
+    {
+        return customerProfiles == null || customerProfiles.Length == 0 ? null
+            : customerProfiles[Random.Range(0, customerProfiles.Length)];
+    }
 
     private readonly List<Customer> customers = new List<Customer>();
     private Coroutine spawnRoutine;
+    public event System.Action<Customer> CustomerSpawned;
+    public event System.Action<Customer> CustomerFinished;
 
     public int CurrentCustomerCount { get { return customers.Count; } }
     public int CustomersSpawnedToday { get; private set; }
@@ -89,6 +100,7 @@ public sealed class CustomerManager : MonoBehaviour
 
     public void SpawnCustomer()
     {
+        if (GameSession.IsRestoring) return;
         if (shopDayCycle != null && shopDayCycle.State != ShopDayState.Open)
         {
             return;
@@ -105,16 +117,12 @@ public sealed class CustomerManager : MonoBehaviour
             return;
         }
 
-        ArcadeMachine machine = FindAvailableMachine();
-        if (machine == null)
-        {
-            return;
-        }
+        ArcadeMachine machine = ReserveMachine();
 
         NavMeshHit hit;
         if (!NavMesh.SamplePosition(entrancePoint.position, out hit, 2f, NavMesh.AllAreas))
         {
-            machine.ReleaseReservation();
+            if (machine != null) machine.ReleaseReservation();
             Debug.LogError("Customer entrance is not on a baked NavMesh.", this);
             return;
         }
@@ -125,16 +133,19 @@ public sealed class CustomerManager : MonoBehaviour
         }
 
         Customer customer = Instantiate(customerPrefab, hit.position, entrancePoint.rotation);
-        customer.Initialize(this, machine, coinCounterPoint, coinCounter, exitPoint, entranceDoor);
         customers.Add(customer);
         CustomersSpawnedToday++;
+        customer.Initialize(this, machine, coinCounterPoint, coinCounter, exitPoint, entranceDoor);
+        CustomerSpawned?.Invoke(customer);
+        ShopAudio.Play(ShopSound.Arrival);
     }
 
     public void NotifyCustomerFinished(Customer customer)
     {
         if (customers.Remove(customer))
         {
-            CustomersServedToday++;
+            if (customer.CompletedPlays > 0) CustomersServedToday++;
+            CustomerFinished?.Invoke(customer);
         }
     }
 
@@ -150,10 +161,23 @@ public sealed class CustomerManager : MonoBehaviour
         }
     }
 
+    public void FinishDay()
+    {
+        Customer[] snapshot = customers.ToArray();
+        foreach (Customer customer in snapshot)
+            if (customer != null) customer.FinishDay();
+    }
+
     private void OnDayChanged(int dayNumber)
     {
         CustomersSpawnedToday = 0;
         CustomersServedToday = 0;
+    }
+
+    public void RestoreDailyStats(int spawned, int served)
+    {
+        CustomersSpawnedToday = Mathf.Max(0, spawned);
+        CustomersServedToday = Mathf.Max(0, served);
     }
 
     private IEnumerator SpawnLoop()
@@ -161,28 +185,30 @@ public sealed class CustomerManager : MonoBehaviour
         while (true)
         {
             SpawnCustomer();
-            yield return new WaitForSeconds(spawnInterval);
+            float reputation = Mathf.Lerp(1.4f, 0.7f, (CustomerReviews.AverageStars - 1f) / 4f);
+            yield return new WaitForSeconds(Mathf.Max(0.2f, spawnInterval * reputation
+                * Random.Range(1f - arrivalVariation, 1f + arrivalVariation)));
         }
     }
 
-    private ArcadeMachine FindAvailableMachine()
+    public ArcadeMachine ReserveMachine(int affordableCoins = int.MaxValue)
     {
-        ArcadeMachine[] machines = FindObjectsOfType<ArcadeMachine>();
+        ArcadeMachine[] machines = FindObjectsByType<ArcadeMachine>();
         ArcadeMachine closest = null;
-        float closestDistance = float.MaxValue;
+        int candidates = 0;
 
         for (int i = 0; i < machines.Length; i++)
         {
-            if (machines[i].State != ArcadeMachineState.Available || machines[i].IsReserved)
+            if (machines[i].State != ArcadeMachineState.Available || machines[i].IsReserved
+                || machines[i].CoinsPerPlay > affordableCoins)
             {
                 continue;
             }
 
-            float distance = (machines[i].transform.position - entrancePoint.position).sqrMagnitude;
-            if (distance < closestDistance)
+            candidates++;
+            if (Random.Range(0, candidates) == 0)
             {
                 closest = machines[i];
-                closestDistance = distance;
             }
         }
 

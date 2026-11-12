@@ -19,6 +19,28 @@ public sealed class ArcadeMachine : MonoBehaviour, IInteractable
     [SerializeField, Range(1, 100)] private int conditionLossPerPlay = 10;
     private bool occupied;
     private bool reserved;
+    public bool IsPlacementPreview { get; private set; }
+
+    private void Awake()
+    {
+        if (GetComponent<ArcadeMachineNavigation>() == null) gameObject.AddComponent<ArcadeMachineNavigation>();
+        if (GetComponent<ArcadeMachineMedia>() == null) gameObject.AddComponent<ArcadeMachineMedia>();
+    }
+
+    public void SetPlacementPreview(bool preview)
+    {
+        IsPlacementPreview = preview;
+        ArcadeMachineNavigation navigation = GetComponent<ArcadeMachineNavigation>();
+        if (navigation != null) navigation.SetPreview(preview);
+        StateChanged?.Invoke();
+    }
+
+    public Vector3 GetNavigationPosition()
+    {
+        UnityEngine.AI.NavMeshHit hit;
+        return UnityEngine.AI.NavMesh.SamplePosition(PlayPoint.position, out hit, 3f, UnityEngine.AI.NavMesh.AllAreas)
+            ? hit.position : PlayPoint.position;
+    }
 
     public event Action StateChanged;
 
@@ -26,7 +48,7 @@ public sealed class ArcadeMachine : MonoBehaviour, IInteractable
     {
         get
         {
-            if (!active) return ArcadeMachineState.Inactive;
+            if (!active || IsPlacementPreview) return ArcadeMachineState.Inactive;
             if (condition <= 0) return ArcadeMachineState.OutOfService;
             if (occupied) return ArcadeMachineState.Occupied;
             return ArcadeMachineState.Available;
@@ -39,6 +61,16 @@ public sealed class ArcadeMachine : MonoBehaviour, IInteractable
     public int Revenue { get; private set; }
     public bool IsReserved { get { return reserved; } }
     public int Condition { get { return condition; } }
+    public bool IsPoweredOn { get { return active; } }
+    public void RestoreProgress(SavedMachine saved)
+    {
+        condition = Mathf.Clamp(saved.Condition, 0, 100);
+        coinsPerPlay = Mathf.Max(1, saved.CoinsPerPlay);
+        Revenue = Mathf.Max(0, saved.Revenue);
+        active = saved.Active;
+        occupied = reserved = false;
+        StateChanged?.Invoke();
+    }
     public int MaintenanceCost
     {
         get { return definition == null ? 0 : definition.MaintenanceCost; }
@@ -105,6 +137,7 @@ public sealed class ArcadeMachine : MonoBehaviour, IInteractable
         }
 
         condition = 100;
+        ShopAudio.Play(ShopSound.Repair);
         StateChanged?.Invoke();
         return true;
     }
@@ -189,7 +222,7 @@ public sealed class ArcadeMachine : MonoBehaviour, IInteractable
             ? 0
             : Revenue * EconomyManager.Instance.CashPerCoin;
         return machineName + "\nState: " + State + "\nPrice: " + coinsPerPlay
-            + " coin(s)\nRevenue: " + Revenue + " coin(s) / ¥" + cashRevenue
-            + "\nCondition: " + condition + "%\nRepair: ¥" + MaintenanceCost;
+            + " coin(s)\nRevenue: " + Revenue + " coin(s) / \u00A5" + cashRevenue
+            + "\nCondition: " + condition + "%\nRepair: \u00A5" + MaintenanceCost;
     }
 }

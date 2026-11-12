@@ -70,4 +70,14 @@ public sealed class EconomyManager : MonoBehaviour
         DailyRevenue = 0;
         DailyExpenses = 0;
     }
+
+    public void RestoreProgress(ShopSaveData data)
+    {
+        CurrentCash = Mathf.Max(0, data.Cash);
+        Revenue = Mathf.Max(0, data.Revenue);
+        Expenses = Mathf.Max(0, data.Expenses);
+        DailyRevenue = Mathf.Max(0, data.DailyRevenue);
+        DailyExpenses = Mathf.Max(0, data.DailyExpenses);
+        CashChanged?.Invoke(CurrentCash);
+    }
 }

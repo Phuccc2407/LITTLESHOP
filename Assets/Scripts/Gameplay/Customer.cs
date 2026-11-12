@@ -5,7 +5,7 @@ using UnityEngine.AI;
 [RequireComponent(typeof(CapsuleCollider))]
 public sealed class Customer : MonoBehaviour
 {
-    private enum CustomerState
+    public enum CustomerState
     {
         WalkingToCounter,
         WaitingForCoins,
@@ -32,12 +32,32 @@ public sealed class Customer : MonoBehaviour
     private CustomerState state;
     private float playTimeRemaining;
     private int coins;
-    private float coinPurchaseTimeRemaining;
     private Animator animationTarget;
+    private int desiredPlays;
+    private int completedPlays;
+    private int requestedCoins;
+    private float patience;
+    private float waitingTime;
+    private float reviewChance;
+    private string visitorName;
+    private string departureReason = "A fun visit. I will come back!";
+    private bool reviewWritten;
+    private bool playingMachine;
+    private int playPrice;
+    private float navigationTime;
+
+    public int CompletedPlays { get { return completedPlays; } }
+    public CustomerState State { get { return state; } }
+    public string Activity { get { return state.ToString(); } }
+    public float PatienceRemaining { get { return Mathf.Max(0f, patience - waitingTime); } }
 
     public float Satisfaction { get; private set; }
-    public int RequiredCoins { get { return machine == null ? 0 : machine.CoinsPerPlay; } }
-    public bool IsWaitingForCoins { get { return state == CustomerState.WaitingForCoins; } }
+    public int RequiredCoins { get { return requestedCoins; } }
+    public bool IsWaitingForCoins
+    {
+        get { return state == CustomerState.WaitingForCoins && machine != null
+            && machine.State == ArcadeMachineState.Available; }
+    }
 
     private void Awake()
     {
@@ -136,12 +156,37 @@ public sealed class Customer : MonoBehaviour
         exitPoint = exit;
         entranceDoor = door;
         Satisfaction = startingSatisfaction;
+        CustomerProfile profile = owner.PickProfile();
+        patience = profile == null ? Random.Range(35f, 80f) : profile.PatienceSeconds;
+        desiredPlays = profile == null ? Random.Range(1, 5)
+            : Random.Range(Mathf.Max(1, profile.MinPlays), Mathf.Max(profile.MinPlays, profile.MaxPlays) + 1);
+        reviewChance = profile == null ? 0.8f : profile.ReviewChance;
+        visitorName = profile == null ? "Guest" : profile.DisplayName;
+        int budget = profile == null ? Random.Range(6, 16) : Mathf.Max(1, profile.CoinBudget);
+        playPrice = machine == null ? 1 : machine.CoinsPerPlay;
+        desiredPlays = Mathf.Min(desiredPlays, budget / playPrice);
+        requestedCoins = desiredPlays * playPrice;
         agent = GetComponent<NavMeshAgent>();
         if (agent == null || !agent.isOnNavMesh)
         {
             Debug.LogError("Customer must spawn on a baked NavMesh.", this);
+            if (machine != null) machine.ReleaseReservation();
+            CloseEntranceDoor();
+            DestroyCustomer();
             return;
         }
+        agent.autoRepath = true;
+        agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+
+        if (machine == null || desiredPlays == 0)
+        {
+            Satisfaction = 25f;
+            departureReason = machine == null ? "No machines available. Please add more games!" : "The games are too expensive for my budget.";
+            BeginLeaving();
+            return;
+        }
+        float sensitivity = profile == null ? 0.6f : profile.PriceSensitivity;
+        Satisfaction = Mathf.Clamp(Satisfaction - Mathf.Max(0, playPrice - 1) * sensitivity * 5f, 0f, 100f);
 
         if (coinCounter != null)
         {
@@ -150,6 +195,7 @@ public sealed class Customer : MonoBehaviour
         }
         else
         {
+            if (coinCounterPoint == null) BuyCoinsAtCounter();
             state = coinCounterPoint == null
                 ? CustomerState.WalkingToMachine
                 : CustomerState.WalkingToCounter;
@@ -164,12 +210,44 @@ public sealed class Customer : MonoBehaviour
             return;
         }
 
+        if (state != CustomerState.Leaving && state != CustomerState.Playing
+            && (machine == null || machine.State != ArcadeMachineState.Available))
+        {
+            Satisfaction = Mathf.Max(0f, Satisfaction - 25f);
+            departureReason = "The machine I wanted was no longer available.";
+            BeginLeaving();
+            return;
+        }
+
         if (state != CustomerState.Leaving && state != CustomerState.Playing)
         {
             Satisfaction = Mathf.Max(0f, Satisfaction - satisfactionLossPerSecond * Time.deltaTime);
         }
 
-        if (!agent.pathPending && agent.pathStatus == NavMeshPathStatus.PathInvalid)
+        if (state == CustomerState.WalkingToCounter || state == CustomerState.WaitingForCoins)
+        {
+            waitingTime += Time.deltaTime;
+            if (waitingTime >= patience || Satisfaction <= 0f)
+            {
+                Satisfaction = Mathf.Min(Satisfaction, 25f);
+                departureReason = "I waited too long to buy coins.";
+                ShopAudio.Play(ShopSound.Unhappy);
+                BeginLeaving();
+                return;
+            }
+        }
+        if (state != CustomerState.Playing && state != CustomerState.WaitingForCoins)
+        {
+            navigationTime += Time.deltaTime;
+            if (navigationTime > 90f)
+            {
+                if (state == CustomerState.Leaving) { CloseEntranceDoor(); DestroyCustomer(); }
+                else { Satisfaction = 20f; departureReason = "I could not reach the games."; BeginLeaving(); }
+                return;
+            }
+        }
+
+        if (!agent.pathPending && agent.pathStatus != NavMeshPathStatus.PathComplete)
         {
             if (state == CustomerState.Leaving)
             {
@@ -178,6 +256,8 @@ public sealed class Customer : MonoBehaviour
             }
             else
             {
+                Satisfaction = Mathf.Min(Satisfaction, 20f);
+                departureReason = "The path to the counter or games was blocked.";
                 BeginLeaving();
             }
 
@@ -198,7 +278,7 @@ public sealed class Customer : MonoBehaviour
                 {
                     BuyCoinsAtCounter();
                     state = CustomerState.WalkingToMachine;
-                    SetDestination(machine.PlayPoint.position);
+                    SetDestination(machine.GetNavigationPosition());
                 }
             }
 
@@ -218,19 +298,25 @@ public sealed class Customer : MonoBehaviour
                 return;
             }
 
-            if (coins <= 0 || !machine.TryStartPlay())
+            if (coins < machine.CoinsPerPlay || !machine.TryStartPlay())
             {
+                Satisfaction = Mathf.Max(0f, Satisfaction - 25f);
+                departureReason = "The machine was unavailable or its price changed.";
                 BeginLeaving();
                 return;
             }
 
             agent.isStopped = true;
-            transform.SetPositionAndRotation(
-                machine.PlayPoint.position,
-                machine.PlayPoint.rotation);
+            playingMachine = true;
+            playPrice = machine.CoinsPerPlay;
+            coins -= playPrice;
+            machine.RecordCoinRevenue(playPrice);
+            // Keep the agent on its navigable approach position instead of teleporting into the cabinet.
+            transform.rotation = machine.PlayPoint.rotation;
             playTimeRemaining = machine.Definition == null
                 ? 5f
                 : machine.Definition.PlayDuration;
+            playTimeRemaining *= Random.Range(0.85f, 1.2f);
             state = CustomerState.Playing;
             SetAnimationState(false, true);
             return;
@@ -238,8 +324,10 @@ public sealed class Customer : MonoBehaviour
 
         if (state == CustomerState.Playing)
         {
-            if (machine == null)
+            if (machine == null || machine.State != ArcadeMachineState.Occupied)
             {
+                Satisfaction = Mathf.Max(0f, Satisfaction - 25f);
+                departureReason = "My game was interrupted.";
                 BeginLeaving();
                 return;
             }
@@ -247,9 +335,23 @@ public sealed class Customer : MonoBehaviour
             playTimeRemaining -= Time.deltaTime;
             if (playTimeRemaining <= 0f)
             {
-                coins--;
                 machine.CompletePlay();
-                BeginLeaving();
+                playingMachine = false;
+                completedPlays++;
+                Satisfaction = Mathf.Clamp(Satisfaction + 12f - (100 - machine.Condition) * 0.08f, 0f, 100f);
+                machine = null;
+                if (completedPlays < desiredPlays && coins > 0 && manager.IsShopOpen)
+                    machine = manager.ReserveMachine(coins);
+                if (machine != null)
+                {
+                    state = CustomerState.WalkingToMachine;
+                    SetDestination(machine.GetNavigationPosition());
+                }
+                else
+                {
+                    if (completedPlays < desiredPlays) departureReason = "Had fun, but there were not enough available games.";
+                    BeginLeaving();
+                }
             }
 
             return;
@@ -278,14 +380,14 @@ public sealed class Customer : MonoBehaviour
             return;
         }
 
-        coins = RequiredCoins;
-        machine.RecordCoinRevenue(RequiredCoins);
+        coins = amount;
         state = CustomerState.WalkingToMachine;
-        SetDestination(machine.PlayPoint.position);
+        SetDestination(machine.GetNavigationPosition());
     }
 
     public void MoveToCoinQueuePosition(Vector3 position, Quaternion rotation)
     {
+        if (agent == null || !agent.isOnNavMesh) return;
         if (state != CustomerState.WaitingForCoins && state != CustomerState.WalkingToCounter)
         {
             return;
@@ -315,12 +417,25 @@ public sealed class Customer : MonoBehaviour
 
     public void RequestLeave()
     {
+        if (completedPlays < desiredPlays)
+        {
+            departureReason = "The shop closed before I finished my visit.";
+            Satisfaction = Mathf.Max(0f, Satisfaction - 15f);
+        }
         BeginLeaving();
+    }
+
+    public void FinishDay()
+    {
+        RequestLeave();
+        CloseEntranceDoor();
+        DestroyCustomer();
     }
 
     private void BuyCoinsAtCounter()
     {
         coins = RequiredCoins;
+        if (EconomyManager.Instance != null) EconomyManager.Instance.AddCoinRevenue(coins);
     }
 
     private void BeginLeaving()
@@ -337,12 +452,22 @@ public sealed class Customer : MonoBehaviour
 
         if (machine != null)
         {
-            machine.CancelPlay();
+            if (playingMachine) machine.CancelPlay();
+            playingMachine = false;
             machine.ReleaseReservation();
             machine = null;
         }
 
         state = CustomerState.Leaving;
+        navigationTime = 0f;
+        if (!reviewWritten)
+        {
+            reviewWritten = true;
+            if (departureReason == "A fun visit. I will come back!" && Satisfaction < 60f)
+                departureReason = "The games were fun, but service, prices or maintenance could be better.";
+            if (Random.value <= reviewChance)
+                CustomerReviews.Add(visitorName, Satisfaction, completedPlays, departureReason);
+        }
         agent.isStopped = false;
         SetAnimationState(true, false);
         if (exitPoint == null)
@@ -362,11 +487,12 @@ public sealed class Customer : MonoBehaviour
             return coinCounterPoint.position;
         }
 
-        return machine == null ? transform.position : machine.PlayPoint.position;
+        return machine == null ? transform.position : machine.GetNavigationPosition();
     }
 
     private void SetDestination(Vector3 destination)
     {
+        navigationTime = 0f;
         agent.isStopped = false;
         agent.SetDestination(destination);
         SetAnimationState(true, false);
@@ -409,5 +535,16 @@ public sealed class Customer : MonoBehaviour
         }
 
         Destroy(gameObject);
+    }
+
+    private void OnDestroy()
+    {
+        if (coinCounter != null) coinCounter.UnregisterCustomer(this);
+        if (machine != null)
+        {
+            if (playingMachine) machine.CancelPlay();
+            machine.ReleaseReservation();
+        }
+        if (manager != null) manager.NotifyCustomerFinished(this);
     }
 }

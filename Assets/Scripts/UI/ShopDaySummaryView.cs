@@ -6,19 +6,28 @@ public sealed class ShopDaySummaryView : View
     [SerializeField] private ShopDayCycle shopDayCycle;
     [SerializeField] private CustomerManager customerManager;
     [SerializeField] private TMP_Text summaryText;
+    private bool presented;
+
+    public override void OnShow() { presented = true; }
+    public override void OnHide()
+    {
+        if (presented && shopDayCycle != null) shopDayCycle.DismissSummary();
+        presented = false;
+    }
 
     protected override void Awake()
     {
         base.Awake();
         if (shopDayCycle == null)
         {
-            shopDayCycle = FindObjectOfType<ShopDayCycle>();
+            shopDayCycle = FindAnyObjectByType<ShopDayCycle>();
         }
 
         if (customerManager == null)
         {
-            customerManager = FindObjectOfType<CustomerManager>();
+            customerManager = FindAnyObjectByType<CustomerManager>();
         }
+        if (summaryText != null) { summaryText.enableAutoSizing = true; summaryText.fontSizeMin = 22f; summaryText.fontSizeMax = 36f; }
     }
 
     private void OnEnable()
@@ -39,6 +48,7 @@ public sealed class ShopDaySummaryView : View
 
     public void Close()
     {
+        if (shopDayCycle != null) shopDayCycle.DismissSummary();
         if (GameViewManager.Instance != null)
         {
             GameViewManager.Instance.HideView<ShopDaySummaryView>();
@@ -62,10 +72,11 @@ public sealed class ShopDaySummaryView : View
 
         if (summaryText != null)
         {
-            summaryText.text = "Day " + dayNumber + " summary\n"
-                + "Revenue: ¥" + dailyRevenue.ToString("N0") + "\n"
-                + "Expenses: ¥" + dailyExpenses.ToString("N0") + "\n"
-                + "Profit: ¥" + profit.ToString("N0") + "\n"
+            summaryText.text = ShopDayCycle.StartDate.AddDays(dayNumber - 1)
+                .ToString("dddd, dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture) + " - Summary\n"
+                + "Revenue: \u00A5" + dailyRevenue.ToString("N0") + "\n"
+                + "Expenses: \u00A5" + dailyExpenses.ToString("N0") + "\n"
+                + "Profit: \u00A5" + profit.ToString("N0") + "\n"
                 + "Customers served: " + servedCustomers;
         }
 
@@ -74,6 +85,5 @@ public sealed class ShopDaySummaryView : View
             GameViewManager.Instance.ShowView(this);
         }
 
-        EconomyManager.Instance.ResetDailyStats();
     }
 }

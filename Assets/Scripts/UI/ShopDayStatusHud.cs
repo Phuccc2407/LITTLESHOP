@@ -13,13 +13,14 @@ public sealed class ShopDayStatusHud : MonoBehaviour
     {
         if (shopDayCycle == null)
         {
-            shopDayCycle = FindObjectOfType<ShopDayCycle>();
+            shopDayCycle = FindAnyObjectByType<ShopDayCycle>();
         }
 
         if (customerManager == null)
         {
-            customerManager = FindObjectOfType<CustomerManager>();
+            customerManager = FindAnyObjectByType<CustomerManager>();
         }
+        if (timeText != null) { timeText.enableAutoSizing = true; timeText.fontSizeMin = 18f; timeText.fontSizeMax = 28f; }
     }
 
     private void OnEnable()
@@ -78,7 +79,7 @@ public sealed class ShopDayStatusHud : MonoBehaviour
 
         if (timeText != null)
         {
-            timeText.text = "DAY " + shopDayCycle.DayNumber + " - "
+            timeText.text = shopDayCycle.DateLabel + "\n"
                 + shopDayCycle.CurrentHour.ToString("00") + ":"
                 + shopDayCycle.CurrentMinute.ToString("00");
         }

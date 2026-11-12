@@ -43,6 +43,7 @@ public sealed class PlayerInteractor : MonoBehaviour
 
     private void Update()
     {
+        if (GameSession.IsRestoring) return;
         Outline nextOutline;
         CustomerWorldStatus nextCustomerStatus;
         currentInteractable = FindInteractable(out nextOutline, out nextCustomerStatus);

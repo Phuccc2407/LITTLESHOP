@@ -81,4 +81,21 @@ public sealed class InventoryManager : MonoBehaviour
 
         return null;
     }
+
+    public List<SavedItemStack> CaptureProgress()
+    {
+        List<SavedItemStack> result = new List<SavedItemStack>();
+        foreach (InventoryEntry entry in entries)
+            if (entry.item != null && entry.quantity > 0)
+                result.Add(new SavedItemStack { ItemId = entry.item.ItemId, Quantity = entry.quantity });
+        return result;
+    }
+
+    public void RestoreProgress(List<SavedItemStack> saved, ShopItemCatalog catalog)
+    {
+        entries.Clear();
+        foreach (SavedItemStack entry in saved)
+            entries.Add(new InventoryEntry { item = catalog.Find(entry.ItemId), quantity = entry.Quantity });
+        InventoryChanged?.Invoke();
+    }
 }

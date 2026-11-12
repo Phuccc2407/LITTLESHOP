@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using UnityEngine;
 
 public enum ShopDayState
@@ -17,6 +18,11 @@ public sealed class ShopDayCycle : MonoBehaviour
 
     public ShopDayState State { get; private set; }
     public int DayNumber { get; private set; } = 1;
+    public static DateTime StartDate { get { return new DateTime(2026, 1, 1); } }
+    public DateTime CurrentDate { get { return StartDate.AddDays(DayNumber - 1); } }
+    public string DateLabel { get { return CurrentDate.ToString("dddd, dd/MM/yyyy", CultureInfo.InvariantCulture); } }
+    public bool AwaitingSummary { get; private set; }
+    private bool endingDay;
     public float CurrentTimeMinutes { get; private set; }
     public float RemainingTimeMinutes
     {
@@ -46,6 +52,7 @@ public sealed class ShopDayCycle : MonoBehaviour
         }
 
         CurrentTimeMinutes = openingHour * 60f;
+        if (customerManager != null) customerManager.SetSpawningEnabled(false);
         if (startsOpen)
         {
             OpenShop();
@@ -58,28 +65,18 @@ public sealed class ShopDayCycle : MonoBehaviour
 
     private void Update()
     {
+        if (GameSession.IsRestoring || AwaitingSummary || endingDay) return;
         float minutesPerSecond = 1440f / (dayLengthMinutes * 60f);
         CurrentTimeMinutes += minutesPerSecond * Time.deltaTime;
-        if (CurrentTimeMinutes >= 1440f)
+        if (CurrentTimeMinutes >= closingHour * 60f)
         {
-            DayEnded?.Invoke(DayNumber);
-            CurrentTimeMinutes -= 1440f;
-            DayNumber++;
-            DayChanged?.Invoke(DayNumber);
-        }
-
-        if (State == ShopDayState.Open && !CanOpenShop)
-        {
-            CloseShop();
-            if (CurrentTimeMinutes >= closingHour * 60f && customerManager != null)
-            {
-                customerManager.RequestCustomersLeave();
-            }
+            EndDay();
         }
     }
 
     public void OpenShop()
     {
+        if (AwaitingSummary || endingDay) return;
         if (State == ShopDayState.Open)
         {
             return;
@@ -113,6 +110,44 @@ public sealed class ShopDayCycle : MonoBehaviour
         }
 
         StateChanged?.Invoke(State);
+    }
+
+    public bool EndDay()
+    {
+        if (endingDay || AwaitingSummary) return false;
+        endingDay = true;
+        CloseShop();
+        if (customerManager != null)
+        {
+            customerManager.SetSpawningEnabled(false);
+            customerManager.FinishDay();
+        }
+        AwaitingSummary = true;
+        bool hasSummary = DayEnded != null;
+        // Subscribers read the completed date and financial totals before resets.
+        DayEnded?.Invoke(DayNumber);
+        if (EconomyManager.Instance != null) EconomyManager.Instance.ResetDailyStats();
+        DayNumber++;
+        CurrentTimeMinutes = openingHour * 60f;
+        DayChanged?.Invoke(DayNumber);
+        endingDay = false;
+        if (!hasSummary) AwaitingSummary = false;
+        if (GameSession.Instance != null) GameSession.Instance.SaveGame();
+        return true;
+    }
+
+    public void DismissSummary() { AwaitingSummary = false; }
+
+    public void RestoreProgress(int day, float minutes, bool open)
+    {
+        DayNumber = Mathf.Max(1, day);
+        CurrentTimeMinutes = Mathf.Clamp(minutes, 0f, 1439.99f);
+        AwaitingSummary = endingDay = false;
+        State = ShopDayState.Closed;
+        if (customerManager != null) customerManager.SetSpawningEnabled(false);
+        DayChanged?.Invoke(DayNumber);
+        StateChanged?.Invoke(State);
+        if (open && CanOpenShop) OpenShop();
     }
 
 }

@@ -50,6 +50,7 @@ public sealed class CustomerWorldStatus : MonoBehaviour
         if (statusText != null)
         {
             statusText.text = "Coin: " + customer.RequiredCoins
+                + "\n" + customer.Activity + " | Patience: " + Mathf.CeilToInt(customer.PatienceRemaining) + "s"
                 + "\nSatisfaction: " + Mathf.RoundToInt(customer.Satisfaction) + "%";
         }
 

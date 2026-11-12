@@ -8,7 +8,26 @@ public sealed class GameViewManager : MonoBehaviour
     [SerializeField] private List<View> allViews = new List<View>();
     [SerializeField] private View defaultView;
 
-    public bool IsBlockingViewOpen { get; private set; }
+    private bool viewBlocksInput;
+    private bool externalInputBlocked;
+    public bool IsBlockingViewOpen { get { return viewBlocksInput || externalInputBlocked; } }
+
+    public void SetExternalInputBlocked(bool blocked)
+    {
+        externalInputBlocked = blocked;
+        RefreshBlockingState();
+    }
+
+    public void CloseBlockingViews()
+    {
+        foreach (View view in allViews)
+            if (view != null && view.IsVisible && view.BlocksGameplayInput)
+            {
+                view.SetVisible(false);
+                view.OnHide();
+            }
+        RefreshBlockingState();
+    }
 
     private void Awake()
     {
@@ -65,6 +84,7 @@ public sealed class GameViewManager : MonoBehaviour
 
         view.SetVisible(true);
         view.OnShow();
+        if (view.BlocksGameplayInput) ShopAudio.Play(ShopSound.Click);
         RefreshBlockingState();
     }
 
@@ -96,12 +116,12 @@ public sealed class GameViewManager : MonoBehaviour
 
     private void RefreshBlockingState()
     {
-        IsBlockingViewOpen = false;
+        viewBlocksInput = false;
         for (int i = 0; i < allViews.Count; i++)
         {
             if (allViews[i] != null && allViews[i].IsVisible && allViews[i].BlocksGameplayInput)
             {
-                IsBlockingViewOpen = true;
+                viewBlocksInput = true;
                 break;
             }
         }

@@ -23,6 +23,7 @@ public sealed class PlacementSystem : MonoBehaviour
         new Dictionary<Renderer, Color[]>();
 
     public bool IsPlacing { get { return item != null; } }
+    public void CancelActivePlacement() { if (IsPlacing) CancelPlacement(); }
 
     private void Update()
     {
@@ -91,7 +92,8 @@ public sealed class PlacementSystem : MonoBehaviour
 
     public bool BeginReposition(ArcadeMachine machine)
     {
-        if (IsPlacing || machine == null || machine.Definition == null)
+        if (IsPlacing || machine == null || machine.Definition == null || machine.IsReserved
+            || machine.State == ArcadeMachineState.Occupied)
         {
             return false;
         }
@@ -209,6 +211,8 @@ public sealed class PlacementSystem : MonoBehaviour
 
     private void SetPreviewState(bool isPreview)
     {
+        ArcadeMachine arcade = preview.GetComponent<ArcadeMachine>();
+        if (arcade != null) arcade.SetPlacementPreview(isPreview);
         if (isPreview)
         {
             originalRendererColors.Clear();

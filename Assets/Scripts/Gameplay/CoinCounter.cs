@@ -14,8 +14,8 @@ public sealed class CoinCounter : MonoBehaviour, IInteractable
         get
         {
             return queue.Count == 0
-                ? "Quầy coin - không có khách"
-                : "E - Bán coin cho khách (" + queue[0].RequiredCoins + " coin)";
+                ? "Coin counter - no customers"
+                : "E - Sell coins (" + queue[0].RequiredCoins + " coins requested)";
         }
     }
 
@@ -56,7 +56,7 @@ public sealed class CoinCounter : MonoBehaviour, IInteractable
         RefreshQueuePositions();
     }
 
-    public bool SellToNextCustomer(int amount)
+    public bool SellToNextCustomer(int amount, Customer expectedCustomer = null)
     {
         if (queue.Count == 0 || queue[0] == null || !queue[0].IsWaitingForCoins || amount <= 0)
         {
@@ -64,7 +64,8 @@ public sealed class CoinCounter : MonoBehaviour, IInteractable
         }
 
         Customer customer = queue[0];
-        if (amount < customer.RequiredCoins || EconomyManager.Instance == null)
+        if ((expectedCustomer != null && expectedCustomer != customer)
+            || amount != customer.RequiredCoins || EconomyManager.Instance == null)
         {
             return false;
         }
@@ -73,6 +74,7 @@ public sealed class CoinCounter : MonoBehaviour, IInteractable
 
         queue.RemoveAt(0);
         customer.ReceiveCoins(customer.RequiredCoins);
+        ShopAudio.Play(ShopSound.Coins);
         RefreshQueuePositions();
         return true;
     }

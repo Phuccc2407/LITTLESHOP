@@ -10,13 +10,26 @@ public sealed class CoinSaleView : View
     private CoinCounter counter;
     private Customer customer;
 
+    private void Update()
+    {
+        if (!IsVisible || counter == null) return;
+        if (customer == null || !customer.IsWaitingForCoins)
+        {
+            Close();
+            return;
+        }
+        UpdateCustomerText();
+    }
+
     public void Open(CoinCounter targetCounter, Customer targetCustomer)
     {
         counter = targetCounter;
         customer = targetCustomer;
         if (coinInput != null)
         {
-            coinInput.text = customer == null ? string.Empty : customer.RequiredCoins.ToString();
+            coinInput.text = string.Empty;
+            coinInput.contentType = TMP_InputField.ContentType.IntegerNumber;
+            coinInput.ActivateInputField();
         }
 
         Refresh();
@@ -27,19 +40,19 @@ public sealed class CoinSaleView : View
         if (counter == null || customer == null || coinInput == null
             || !int.TryParse(coinInput.text, out int amount) || amount <= 0)
         {
-            SetFeedback("Nhập số coin hợp lệ.");
+            SetFeedback("Enter a valid coin amount.");
             return;
         }
 
-        if (amount < customer.RequiredCoins)
+        if (amount != customer.RequiredCoins)
         {
-            SetFeedback("Khách cần ít nhất " + customer.RequiredCoins + " coin.");
+            SetFeedback("This customer wants exactly " + customer.RequiredCoins + " coins.");
             return;
         }
 
-        if (!counter.SellToNextCustomer(amount))
+        if (!counter.SellToNextCustomer(amount, customer))
         {
-            SetFeedback("Không thể hoàn tất giao dịch.");
+            SetFeedback("The customer has left or the queue has changed. Reopen the counter.");
             return;
         }
 
@@ -58,15 +71,20 @@ public sealed class CoinSaleView : View
 
     private void Refresh()
     {
+        UpdateCustomerText();
+        SetFeedback(string.Empty);
+    }
+
+    private void UpdateCustomerText()
+    {
         if (customerText != null)
         {
             customerText.text = customer == null
                 ? "No customer"
-                : "Coin cần bán: " + customer.RequiredCoins
+                : "Requested coins: " + customer.RequiredCoins
                     + "\nSatisfaction: " + Mathf.RoundToInt(customer.Satisfaction) + "%";
         }
 
-        SetFeedback(string.Empty);
     }
 
     private void SetFeedback(string message)

@@ -11,9 +11,16 @@ public sealed class ComputerView : View
     [SerializeField] private TMP_Text itemText;
     [SerializeField] private TMP_Text cashText;
     [SerializeField] private TMP_Text feedbackText;
+    private ComputerReviewsPanel reviewsPanel;
 
     public override void OnShow()
     {
+        if (reviewsPanel == null)
+        {
+            reviewsPanel = GetComponent<ComputerReviewsPanel>();
+            if (reviewsPanel == null) reviewsPanel = gameObject.AddComponent<ComputerReviewsPanel>();
+            reviewsPanel.Build(transform);
+        }
         Refresh();
     }
 
@@ -39,6 +46,7 @@ public sealed class ComputerView : View
         }
 
         SetFeedback("Order placed. Items will be delivered to the pickup area.");
+        ShopAudio.Play(ShopSound.Order);
         Refresh();
     }
 
@@ -74,7 +82,7 @@ public sealed class ComputerView : View
                 itemText.text = string.Empty;
                 for (int i = 0; i < items.Length; i++)
                 {
-                    itemText.text += (i + 1) + ". " + items[i].DisplayName + " - ¥"
+                    itemText.text += (i + 1) + ". " + items[i].DisplayName + " - \u00A5"
                         + items[i].PurchasePrice.ToString("N0") + "\n";
                 }
             }
@@ -82,7 +90,7 @@ public sealed class ComputerView : View
 
         if (cashText != null && EconomyManager.Instance != null)
         {
-            cashText.text = "Cash: ¥" + EconomyManager.Instance.CurrentCash.ToString("N0");
+            cashText.text = "Cash: \u00A5" + EconomyManager.Instance.CurrentCash.ToString("N0");
         }
     }
 

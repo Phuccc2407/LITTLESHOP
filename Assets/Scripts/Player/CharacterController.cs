@@ -20,6 +20,17 @@ public sealed class CharacterController : MonoBehaviour
     private InputAction sprintAction;
     private float verticalVelocity;
     private float cameraPitch;
+    public float CameraPitch { get { return cameraPitch; } }
+
+    public void RestorePose(Vector3 position, Quaternion rotation, float pitch)
+    {
+        controller.enabled = false;
+        transform.SetPositionAndRotation(position, rotation);
+        controller.enabled = true;
+        verticalVelocity = 0f;
+        cameraPitch = Mathf.Clamp(pitch, -89f, 89f);
+        if (cameraRoot != null) cameraRoot.localRotation = Quaternion.Euler(cameraPitch, 0f, 0f);
+    }
 
     private void Awake()
     {
@@ -77,7 +88,7 @@ public sealed class CharacterController : MonoBehaviour
 
     private void Update()
     {
-        if (moveAction == null || (GameViewManager.Instance != null && GameViewManager.Instance.IsBlockingViewOpen))
+        if (GameSession.IsRestoring || moveAction == null || (GameViewManager.Instance != null && GameViewManager.Instance.IsBlockingViewOpen))
         {
             return;
         }
